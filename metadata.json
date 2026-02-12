@@ -1,0 +1,8 @@
+
+{
+  "name": "OrbiTurn - Sistema de Turnos Galáctico",
+  "description": "Una plataforma profesional de gestión de turnos con estética espacial, modo oscuro/claro y chatbot de IA integrado.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
