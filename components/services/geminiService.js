@@ -1,16 +1,22 @@
 export async function getChatResponse(history, message) {
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
   
-  // URL forzada a gemini-1.5-flash en v1beta (la que Google suele activar por defecto)
+  // Usamos la URL que Google acepta por defecto
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
   try {
-    const contents = [{
+    const contents = history.map(msg => ({
+      role: msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.text }]
+    }));
+
+    contents.push({
       role: 'user',
       parts: [{ 
-        text: `Eres OrbiBot, asistente formal de OrbiTurn. Responde seriamente: ${message}` 
+        text: `Eres OrbiBot, el asistente oficial de OrbiTurn. Tono formal, serio, sin negritas ni asteriscos. 
+        Pregunta del usuario: ${message}` 
       }]
-    }];
+    });
 
     const response = await fetch(url, {
       method: 'POST',
@@ -20,11 +26,14 @@ export async function getChatResponse(history, message) {
 
     const data = await response.json();
 
-    if (data.error) throw new Error(data.error.message);
+    if (data.error) {
+      throw new Error(data.error.message);
+    }
 
     return data.candidates[0].content.parts[0].text;
 
   } catch (error) {
-    // ESTE TEXTO TIENE QUE CAMBIAR EN TU PÁGINA
-    return "NUEVO INTENTO CRITICO - ERROR: " + error.message;
+    // Si sale este mensaje, es que el código llegó entero a Vercel
+    return "CÓDIGO COMPLETO - ERROR: " + error.message;
   }
+}
