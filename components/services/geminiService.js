@@ -4,7 +4,7 @@ export async function getChatResponse(history, message) {
       return 'Por favor, escribe un mensaje válido.';
     }
 
-    const response = await fetch('/api/chat', {
+    const response = await fetch('/api', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
