@@ -5,7 +5,7 @@ const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
 
 export async function getChatResponse(history, message) {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
 
     const systemInstruction = `Eres OrbiBot, el asistente oficial de OrbiTurn. 
     Tu tono debe ser EXTREMADAMENTE SERIO, PROFESIONAL Y FORMAL. 
