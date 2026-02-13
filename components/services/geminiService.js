@@ -28,8 +28,8 @@ export async function getChatResponse(history, message) {
     const response = await result.response;
     return response.text();
 
-  } catch (error) {
-    console.error("Gemini Error:", error);
-    return "Error en el sistema de procesamiento. Contacte al departamento técnico.";
+ } catch (error) {
+    console.error("DEBUG:", error);
+    return "ESTO ES UN TEST NUEVO: " + error.message;
   }
 }
