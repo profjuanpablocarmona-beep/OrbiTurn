@@ -29,7 +29,7 @@ const Chatbot: React.FC = () => {
     setIsTyping(true);
 
     try {
-      const response = await getChatResponse(messages, input);
+     const response = await getChatResponse([], input);
       setMessages(prev => [...prev, { role: 'model', text: response }]);
     } catch (error) {
       console.error(error);
