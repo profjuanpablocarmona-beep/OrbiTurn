@@ -1,21 +1,23 @@
 export async function getChatResponse(history, message) {
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-  // Usamos la URL oficial de Google v1 (la estable)
-  const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  
+  // Cambiamos a 'gemini-pro' que es el modelo más compatible del mundo
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
 
   try {
-    // Preparamos los mensajes para Google
-    const contents = history.map(msg => ({
-      role: msg.role === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.text }]
-    }));
+    // Filtramos el historial para que no tenga errores de intentos previos
+    const contents = history
+      .filter(msg => !msg.text.includes("ERROR") && !msg.text.includes("TEST"))
+      .map(msg => ({
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.text }]
+      }));
 
-    // Agregamos el mensaje actual con las instrucciones de OrbiBot
     contents.push({
       role: 'user',
       parts: [{ 
-        text: `Instrucciones: Eres OrbiBot, el asistente oficial de OrbiTurn. Tono formal, serio, sin negritas ni asteriscos. 
-        Pregunta del usuario: ${message}` 
+        text: `Eres OrbiBot, asistente de OrbiTurn. Tono formal y serio. No uses negritas ni asteriscos. 
+        Usuario: ${message}` 
       }]
     });
 
@@ -28,13 +30,13 @@ export async function getChatResponse(history, message) {
     const data = await response.json();
 
     if (data.error) {
+      // Si este modelo tampoco existe, Google nos va a decir qué modelos TENEMOS permitidos
       throw new Error(data.error.message);
     }
 
     return data.candidates[0].content.parts[0].text;
 
   } catch (error) {
-    console.error("Error directo:", error);
-    return "ERROR DE CONEXIÓN DIRECTA: " + error.message;
+    return "ERROR DEFINITIVO: " + error.message;
   }
 }
