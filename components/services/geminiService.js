@@ -1,42 +1,40 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
-
 export async function getChatResponse(history, message) {
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  // Usamos la URL oficial de Google v1 (la estable)
+  const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // Preparamos los mensajes para Google
+    const contents = history.map(msg => ({
+      role: msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.text }]
+    }));
 
-    // Limpiamos el historial para que SIEMPRE empiece con un mensaje de 'user'
-    // y no tenga mensajes vacíos.
-    const cleanedHistory = history
-      .map(msg => ({
-        role: msg.role === 'user' ? 'user' : 'model',
-        parts: [{ text: msg.text || "" }],
-      }))
-      .filter(msg => msg.parts[0].text.trim() !== "");
-
-    // Si el primer mensaje del historial no es del usuario, lo eliminamos
-    while (cleanedHistory.length > 0 && cleanedHistory[0].role !== 'user') {
-      cleanedHistory.shift();
-    }
-
-    const chat = model.startChat({
-      history: cleanedHistory,
+    // Agregamos el mensaje actual con las instrucciones de OrbiBot
+    contents.push({
+      role: 'user',
+      parts: [{ 
+        text: `Instrucciones: Eres OrbiBot, el asistente oficial de OrbiTurn. Tono formal, serio, sin negritas ni asteriscos. 
+        Pregunta del usuario: ${message}` 
+      }]
     });
 
-    // Ponemos las instrucciones de personalidad justo antes del mensaje
-    const finalPrompt = `INSTRUCCIONES DE PERSONALIDAD: 
-    Eres OrbiBot, asistente de OrbiTurn. Tono serio y formal. 
-    NO uses asteriscos ni negritas. Separa párrafos con una línea en blanco.
-    
-    MENSAJE DEL USUARIO: ${message}`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents })
+    });
 
-    const result = await chat.sendMessage(finalPrompt);
-    const response = await result.response;
-    return response.text();
+    const data = await response.json();
+
+    if (data.error) {
+      throw new Error(data.error.message);
+    }
+
+    return data.candidates[0].content.parts[0].text;
 
   } catch (error) {
-    // Si sigue fallando, al menos sabremos si es por el mismo error
-    return "INTENTO FINAL - ERROR: " + error.message;
+    console.error("Error directo:", error);
+    return "ERROR DE CONEXIÓN DIRECTA: " + error.message;
   }
 }
