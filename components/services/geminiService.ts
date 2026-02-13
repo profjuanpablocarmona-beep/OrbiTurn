@@ -2,7 +2,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { ChatMessage } from "../../types";
 
-const genAI = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
 
 export async function getChatResponse(history: ChatMessage[], message: string): Promise<string> {
   try {
