@@ -1,7 +1,7 @@
 // geminiService.js
 
 const SYSTEM_PROMPT = `Eres OrbiBot, un asistente virtual profesional. 
-Características de tus respuesas:
+Características de tus respuestas:
 - Tono serio y formal
 - Sin usar negritas, asteriscos ni formato markdown
 - Respuestas claras y directas
@@ -14,61 +14,81 @@ export async function getChatResponse(history, message) {
     return "Error de configuración: API Key no encontrada. Verifica las variables de entorno en Vercel.";
   }
 
-  // CAMBIO CRÍTICO: usar v1 en lugar de v1beta
   const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
   try {
-    // Construir el historial de conversación correctamente
+    // Construir el contenido correctamente
     const contents = [];
     
+    // Agregar mensaje del sistema como primer mensaje del usuario
+    contents.push({
+      role: 'user',
+      parts: [{ text: SYSTEM_PROMPT }]
+    });
+    
+    // Respuesta del modelo aceptando las instrucciones
+    contents.push({
+      role: 'model',
+      parts: [{ text: 'Entendido. Soy OrbiBot y responderé de forma seria y formal, sin usar negritas ni asteriscos.' }]
+    });
+    
     // Agregar historial previo si existe
-    if (history && history.length > 0) {
+    if (history && Array.isArray(history) && history.length > 0) {
       history.forEach(msg => {
-        contents.push({
-          role: msg.role === 'user' ? 'user' : 'model',
-          parts: [{ text: msg.content }]
-        });
+        // Asegurarse de que cada mensaje tenga la estructura correcta
+        if (msg.content && msg.content.trim() !== '') {
+          contents.push({
+            role: msg.role === 'user' ? 'user' : 'model',
+            parts: [{ text: msg.content }]
+          });
+        }
       });
     }
     
-    // Agregar el mensaje actual con el prompt del sistema
-    contents.push({
-      role: 'user',
-      parts: [{ text: `${SYSTEM_PROMPT}\n\nUsuario: ${message}` }]
-    });
+    // Agregar el mensaje actual del usuario
+    if (message && message.trim() !== '') {
+      contents.push({
+        role: 'user',
+        parts: [{ text: message }]
+      });
+    } else {
+      return "Error: El mensaje está vacío.";
+    }
+
+    const requestBody = {
+      contents: contents,
+      generationConfig: {
+        temperature: 0.7,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 1024,
+      },
+      safetySettings: [
+        {
+          category: "HARM_CATEGORY_HARASSMENT",
+          threshold: "BLOCK_MEDIUM_AND_ABOVE"
+        },
+        {
+          category: "HARM_CATEGORY_HATE_SPEECH",
+          threshold: "BLOCK_MEDIUM_AND_ABOVE"
+        },
+        {
+          category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+          threshold: "BLOCK_MEDIUM_AND_ABOVE"
+        },
+        {
+          category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+          threshold: "BLOCK_MEDIUM_AND_ABOVE"
+        }
+      ]
+    };
 
     const response = await fetch(url, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ 
-        contents,
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 1024,
-        },
-        safetySettings: [
-          {
-            category: "HARM_CATEGORY_HARASSMENT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          },
-          {
-            category: "HARM_CATEGORY_HATE_SPEECH",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          },
-          {
-            category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          },
-          {
-            category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          }
-        ]
-      })
+      body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {
@@ -79,7 +99,6 @@ export async function getChatResponse(history, message) {
 
     const data = await response.json();
 
-    // Validación robusta de la respuesta
     if (data.error) {
       console.error('Error en respuesta de Google:', data.error);
       return `Error de Google Gemini: ${data.error.message}`;
@@ -91,7 +110,6 @@ export async function getChatResponse(history, message) {
 
     const candidate = data.candidates[0];
     
-    // Verificar si la respuesta fue bloqueada
     if (candidate.finishReason === 'SAFETY') {
       return "La respuesta fue bloqueada por los filtros de seguridad de Google. Intenta reformular tu pregunta.";
     }
